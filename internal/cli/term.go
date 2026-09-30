@@ -61,7 +61,7 @@ func newTTY() *ttyIO {
 	return t
 }
 
-func (t *ttyIO) Write(p []byte) (int, error)          { return os.Stdout.Write(p) }
+func (t *ttyIO) Write(p []byte) (int, error)           { return os.Stdout.Write(p) }
 func (t *ttyIO) SetCompleter(fn func(string) []string) { t.complete = fn }
 
 func (t *ttyIO) ReadCommand(prompt string) (string, error) {
@@ -144,9 +144,9 @@ func (p *plainIO) ReadCommand(prompt string) (string, error)  { return p.ReadLin
 func (p *plainIO) ReadPassword(prompt string) (string, error) { return p.ReadLine(prompt) } // echoed
 
 func (p *plainIO) ReadLine(prompt string) (string, error) {
-	fmt.Fprint(p.w, prompt)
+	_, _ = fmt.Fprint(p.w, prompt)
 	line, err := p.r.ReadString('\n')
-	if err != nil && !(errors.Is(err, io.EOF) && line != "") { // keep a final unterminated line
+	if err != nil && (!errors.Is(err, io.EOF) || line == "") { // keep a final unterminated line
 		return "", err
 	}
 	return strings.TrimRight(line, "\r\n"), nil

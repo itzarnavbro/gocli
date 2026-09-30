@@ -35,7 +35,8 @@ func FuzzUsername(f *testing.F) {
 		}
 		for i := 0; i < len(n); i++ {
 			c := n[i]
-			if !(c >= 'a' && c <= 'z' || c >= '0' && c <= '9' || c == '_') {
+			ok := c >= 'a' && c <= 'z' || c >= '0' && c <= '9' || c == '_'
+			if !ok {
 				t.Fatalf("bad byte %q accepted in %q", c, n)
 			}
 		}

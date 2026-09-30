@@ -35,7 +35,7 @@ func run() int {
 		fmt.Fprintln(os.Stderr, "database error:", err)
 		return 1
 	}
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 
 	clk := domain.RealClock{}
 	st := store.NewSQLite(conn)

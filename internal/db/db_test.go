@@ -15,16 +15,22 @@ func TestOpenMigratesAndIsIdempotent(t *testing.T) {
 		}
 
 		var tables int
-		d.QueryRow(`SELECT COUNT(*) FROM sqlite_master WHERE name IN ('users','sessions')`).Scan(&tables)
+		if err := d.QueryRow(`SELECT COUNT(*) FROM sqlite_master WHERE name IN ('users','sessions')`).Scan(&tables); err != nil {
+			t.Fatal(err)
+		}
 		if tables != 2 {
 			t.Fatalf("run %d: want 2 tables, got %d", i, tables)
 		}
 
 		var applied int
-		d.QueryRow(`SELECT COUNT(*) FROM schema_migrations`).Scan(&applied)
+		if err := d.QueryRow(`SELECT COUNT(*) FROM schema_migrations`).Scan(&applied); err != nil {
+			t.Fatal(err)
+		}
 		if applied != 1 {
 			t.Fatalf("run %d: want 1 migration applied, got %d", i, applied)
 		}
-		d.Close()
+		if err := d.Close(); err != nil {
+			t.Fatal(err)
+		}
 	}
 }

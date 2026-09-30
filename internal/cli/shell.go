@@ -127,7 +127,7 @@ func (s *Shell) endSession(ctx context.Context) {
 
 // ---- output ----
 
-func (s *Shell) printf(format string, a ...any)  { fmt.Fprintf(s.tio, format, a...) }
+func (s *Shell) printf(format string, a ...any)   { _, _ = fmt.Fprintf(s.tio, format, a...) }
 func (s *Shell) successf(format string, a ...any) { s.printf("✔ "+format+"\n", a...) }
 func (s *Shell) errorf(format string, a ...any)   { s.printf("✘ "+format+"\n", a...) }
 

@@ -26,7 +26,7 @@ func Open(path string) (*sql.DB, error) {
 	d.SetMaxOpenConns(1) // SQLite: one writer, keeps things simple and race-free
 
 	if err := migrate(d); err != nil {
-		d.Close()
+		_=d.Close()
 		return nil, fmt.Errorf("migrate: %w", err)
 	}
 	return d, nil
@@ -72,11 +72,11 @@ func migrate(d *sql.DB) error {
 			return err
 		}
 		if _, err := tx.Exec(string(body)); err != nil {
-			tx.Rollback()
+			_=tx.Rollback()
 			return fmt.Errorf("apply %s: %w", name, err)
 		}
 		if _, err := tx.Exec(`INSERT INTO schema_migrations (version) VALUES (?)`, version); err != nil {
-			tx.Rollback()
+			_=tx.Rollback()
 			return err
 		}
 		if err := tx.Commit(); err != nil {

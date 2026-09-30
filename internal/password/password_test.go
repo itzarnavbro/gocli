@@ -88,6 +88,6 @@ func FuzzVerify(f *testing.F) {
 	f.Add("")
 	f.Add("$$$$$")
 	f.Fuzz(func(t *testing.T, enc string) {
-		Verify("pw", enc) // must never panic
+		_,_,_=Verify("pw", enc) // must never panic
 	})
 }

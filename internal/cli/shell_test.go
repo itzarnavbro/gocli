@@ -24,7 +24,6 @@ type fakeClock struct{ t time.Time }
 func (c *fakeClock) Now() time.Time          { return c.t }
 func (c *fakeClock) Advance(d time.Duration) { c.t = c.t.Add(d) }
 
-// step is one scripted input. fn (if set) computes the input at the moment it is read.
 type step struct {
 	line string
 	fn   func() string
@@ -38,7 +37,6 @@ func lines(ss ...string) []step {
 	return out
 }
 
-// scriptIO feeds scripted input and records everything the shell prints.
 type scriptIO struct {
 	steps []step
 	i     int
@@ -177,7 +175,6 @@ func TestLockout(t *testing.T) {
 func Test2FAFlow(t *testing.T) {
 	e := newEnv()
 
-	// reads the setup key that enable-2fa printed and computes the current code
 	code := step{fn: func() string {
 		out := e.io.out.String()
 		i := strings.LastIndex(out, "  Key:")
@@ -213,8 +210,8 @@ func TestComplete(t *testing.T) {
 	s := New(e.svc, e.clk, e.io)
 
 	cases := map[string][]string{
-		"lo": {"login"},     // "logout" isn't available while logged out
-		"e":  {"exit"},      // neither is "enable-2fa"
+		"lo": {"login"},
+		"e":  {"exit"},
 		"":   {"exit", "help", "login", "register"},
 		"zz": nil,
 	}

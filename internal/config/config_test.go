@@ -10,7 +10,7 @@ var goodKey = strings.Repeat("ef", 32)
 
 func TestLoadDefaults(t *testing.T) {
 	for _, k := range []string{"DB_PATH", "TOTP_ISSUER", "SESSION_TTL", "LOCKOUT_DURATION", "MAX_FAILED_ATTEMPTS"} {
-		t.Setenv(k, "") // empty counts as unset, so the defaults apply
+		t.Setenv(k, "")
 	}
 	t.Setenv("TOTP_ENC_KEY", goodKey)
 	c, err := Load()

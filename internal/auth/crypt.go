@@ -8,8 +8,7 @@ import (
 	"strconv"
 )
 
-// seal encrypts with AES-256-GCM. Output is nonce || ciphertext.
-// aad is authenticated but not encrypted; we bind each secret to its user row.
+// AES-GCM se encrypt karke user-specific aad ke saath bind kar dete hain.
 func seal(key, plaintext, aad []byte) ([]byte, error) {
 	gcm, err := newGCM(key)
 	if err != nil {
@@ -42,8 +41,7 @@ func newGCM(key []byte) (cipher.AEAD, error) {
 	return cipher.NewGCM(block)
 }
 
-// userAAD stops someone with DB access from copying user A's encrypted
-// secret into user B's row: decryption would fail.
+// user-specific aad is liye ke secret ko doosre user ke row me paste nahi ho paaye.
 func userAAD(id int64) []byte {
 	return []byte("totp:" + strconv.FormatInt(id, 10))
 }

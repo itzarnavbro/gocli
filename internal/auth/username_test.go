@@ -7,11 +7,11 @@ func TestUsernameTable(t *testing.T) {
 		in string
 		ok bool
 	}{
-		{"arnav", true}, {"Arnav_01", true}, {"  arnav  ", true}, // trimmed and lowercased
+		{"arnav", true}, {"Arnav_01", true}, {"  arnav  ", true},
 		{"abc", true}, {"a_b", true},
 		{"ab", false}, {"", false}, {"has space", false}, {"semi;colon", false},
 		{"dash-ed", false}, {"arnav\n", true}, {"ärnav", false},
-		{"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", false}, // 33 chars
+		{"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", false},
 	}
 	for _, c := range cases {
 		if got := usernameRe.MatchString(normalize(c.in)); got != c.ok {
@@ -29,7 +29,6 @@ func FuzzUsername(f *testing.F) {
 		if !usernameRe.MatchString(n) {
 			return
 		}
-		// anything accepted must be 3-32 bytes of [a-z0-9_] only
 		if len(n) < 3 || len(n) > 32 {
 			t.Fatalf("bad length accepted: %q", n)
 		}

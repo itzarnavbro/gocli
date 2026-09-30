@@ -17,7 +17,6 @@ import (
 	"github.com/itzarnavbro/gocli/internal/store"
 )
 
-// main only exists so run's defers (db close, signal cleanup) execute before exit.
 func main() { os.Exit(run()) }
 
 func run() int {
@@ -43,8 +42,6 @@ func run() int {
 
 	go reap(ctx, st, clk, time.Minute)
 
-	// The shell blocks on stdin, so it runs in a goroutine and we race it
-	// against the shutdown signal (docker stop sends SIGTERM).
 	shell := cli.New(svc, clk, cli.NewIO())
 	done := make(chan error, 1)
 	go func() { done <- shell.Run(ctx) }()
@@ -61,8 +58,7 @@ func run() int {
 	return 0
 }
 
-// reap deletes expired sessions: once at startup, then on every tick,
-// until ctx is cancelled.
+// expired sessions cleanup startup + periodic sweep ke liye hai.
 func reap(ctx context.Context, st domain.Store, clk domain.Clock, every time.Duration) {
 	sweep := func() {
 		if err := st.DeleteExpired(ctx, clk.Now()); err != nil && ctx.Err() == nil {

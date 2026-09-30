@@ -19,7 +19,6 @@ type Shell struct {
 	tio  IO
 	cmds []Command
 
-	// session state (empty when logged out)
 	token     string
 	user      *domain.User
 	sess      *domain.Session
@@ -32,7 +31,6 @@ func New(svc *auth.Service, clk domain.Clock, tio IO) *Shell {
 	return &Shell{svc: svc, clk: clk, tio: tio, cmds: commands()}
 }
 
-// Run is the read-eval loop. Ctrl+D (or Ctrl+C) at the main prompt exits.
 func (s *Shell) Run(ctx context.Context) error {
 	if c, ok := s.tio.(completable); ok {
 		c.SetCompleter(s.complete)
@@ -61,7 +59,6 @@ func (s *Shell) dispatch(ctx context.Context, line string) {
 	}
 	name, args := strings.ToLower(fields[0]), fields[1:]
 
-	// Check the session before every command.
 	if s.loggedIn() {
 		if err := s.refresh(ctx); err != nil {
 			s.report(err)
@@ -86,8 +83,6 @@ func (s *Shell) dispatch(ctx context.Context, line string) {
 	}
 }
 
-// ---- session state ----
-
 func (s *Shell) loggedIn() bool { return s.token != "" }
 
 func (s *Shell) prompt() string {
@@ -97,8 +92,6 @@ func (s *Shell) prompt() string {
 	return "auth> "
 }
 
-// refresh re-validates the session and reloads the user (so 2FA changes show up).
-// An expired session is cleared and announced; the caller then continues logged out.
 func (s *Shell) refresh(ctx context.Context) error {
 	u, sess, err := s.svc.Validate(ctx, s.token)
 	if err != nil {
@@ -117,15 +110,12 @@ func (s *Shell) clearSession() {
 	s.token, s.user, s.sess, s.prevLogin = "", nil, nil, nil
 }
 
-// endSession logs out server-side (best effort) and clears local state.
 func (s *Shell) endSession(ctx context.Context) {
 	if s.token != "" {
 		_ = s.svc.Logout(ctx, s.token)
 	}
 	s.clearSession()
 }
-
-// ---- output ----
 
 func (s *Shell) printf(format string, a ...any)   { _, _ = fmt.Fprintf(s.tio, format, a...) }
 func (s *Shell) successf(format string, a ...any) { s.printf("✔ "+format+"\n", a...) }
@@ -149,7 +139,6 @@ func (s *Shell) report(err error) {
 
 func fmtTime(t time.Time) string { return t.Local().Format("02 Jan 2006 15:04:05 MST") }
 
-// printUser shows the details required after login and by whoami.
 func (s *Shell) printUser() {
 	mfa := "disabled"
 	if s.user.TOTPEnabled {
@@ -168,20 +157,16 @@ func (s *Shell) printUser() {
 	s.printf("  Last login:       %s\n", last)
 }
 
-// ---- input ----
-
-// ask reads a visible answer; password prompts use askSecret.
 func (s *Shell) ask(prompt string) (string, error) {
 	v, err := s.tio.ReadLine(prompt)
 	return strings.TrimSpace(v), cancelOnEOF(err)
 }
 
 func (s *Shell) askSecret(prompt string) (string, error) {
-	v, err := s.tio.ReadPassword(prompt) // not trimmed: passwords may contain spaces
+	v, err := s.tio.ReadPassword(prompt)
 	return v, cancelOnEOF(err)
 }
 
-// Ctrl+D / Ctrl+C inside a prompt cancels the command instead of quitting.
 func cancelOnEOF(err error) error {
 	if errors.Is(err, io.EOF) {
 		return errCancelled

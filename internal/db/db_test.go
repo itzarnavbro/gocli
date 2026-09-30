@@ -8,7 +8,7 @@ import (
 func TestOpenMigratesAndIsIdempotent(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "test.db")
 
-	for i := 0; i < 2; i++ { // second Open must not re-apply or fail
+	for i := 0; i < 2; i++ {
 		d, err := Open(path)
 		if err != nil {
 			t.Fatal(err)

@@ -15,13 +15,12 @@ import (
 
 const (
 	Digits = 6
-	Period = 30 // seconds
-	skew   = 1  // accept +-1 step for clock drift
+	Period = 30
+	skew   = 1
 )
 
 var b32 = base32.StdEncoding.WithPadding(base32.NoPadding)
 
-// HOTP implements RFC 4226 (HMAC-SHA1, dynamic truncation).
 func HOTP(key []byte, counter uint64, digits int) string {
 	var buf [8]byte
 	binary.BigEndian.PutUint64(buf[:], counter)
@@ -40,13 +39,10 @@ func HOTP(key []byte, counter uint64, digits int) string {
 	return fmt.Sprintf("%0*d", digits, bin%mod)
 }
 
-// TOTPAt implements RFC 6238: HOTP with counter = unix time / period.
 func TOTPAt(key []byte, t time.Time, digits int) string {
 	return HOTP(key, uint64(t.Unix()/Period), digits)
 }
 
-// GenerateSecret returns a random 160-bit secret as unpadded base32
-// (the format authenticator apps expect).
 func GenerateSecret() (string, error) {
 	raw := make([]byte, 20)
 	if _, err := rand.Read(raw); err != nil {
@@ -55,9 +51,7 @@ func GenerateSecret() (string, error) {
 	return b32.EncodeToString(raw), nil
 }
 
-// Validate checks code against steps now-1..now+1.
-// Steps <= lastStep are rejected so a code can't be used twice.
-// It returns the matched step, which the caller must persist.
+// TOTP accepts a tiny skew, but same step kabhi replay nahi ho sakta.
 func Validate(secret, code string, now time.Time, lastStep int64) (int64, bool) {
 	key, err := b32.DecodeString(strings.ToUpper(strings.TrimSpace(secret)))
 	if err != nil {
@@ -68,7 +62,6 @@ func Validate(secret, code string, now time.Time, lastStep int64) (int64, bool) 
 	cur := now.Unix() / Period
 	var matched int64
 	found := false
-	// No early return: every candidate step is compared.
 	for s := cur - skew; s <= cur+skew; s++ {
 		if s <= lastStep || s < 0 {
 			continue
@@ -81,7 +74,6 @@ func Validate(secret, code string, now time.Time, lastStep int64) (int64, bool) 
 	return matched, found
 }
 
-// URI builds the otpauth:// URL used for QR codes / manual entry.
 func URI(issuer, account, secret string) string {
 	q := url.Values{}
 	q.Set("secret", secret)

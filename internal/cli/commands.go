@@ -65,7 +65,6 @@ func cmdLogin(ctx context.Context, s *Shell, args []string) error {
 		return err
 	}
 
-	// The 2FA prompt only appears after the password checked out and 2FA is on.
 	res, err := s.svc.Authenticate(ctx, username, pw, func() (string, error) {
 		return s.askSecret("2FA code: ")
 	})
@@ -123,7 +122,7 @@ func cmdEnable2FA(ctx context.Context, s *Shell, _ []string) error {
 		s.successf("Two-factor authentication enabled.")
 		return nil
 	}
-	return nil // not reached: the last iteration always returns
+	return nil
 }
 
 func cmdDisable2FA(ctx context.Context, s *Shell, _ []string) error {
@@ -142,7 +141,7 @@ func cmdDisable2FA(ctx context.Context, s *Shell, _ []string) error {
 
 	err = s.svc.Disable2FA(ctx, s.user.ID, pw, code)
 	var locked domain.ErrLocked
-	if errors.As(err, &locked) { // too many wrong answers: end the session
+	if errors.As(err, &locked) {
 		s.report(err)
 		s.endSession(ctx)
 		s.printf("You have been logged out.\n")
@@ -170,7 +169,6 @@ func cmdExit(_ context.Context, s *Shell, _ []string) error {
 	return nil
 }
 
-// groups inserts a space every n characters: ABCDEFGH -> ABCD EFGH.
 func groups(s string, n int) string {
 	var b strings.Builder
 	for i, r := range s {

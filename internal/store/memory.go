@@ -9,12 +9,11 @@ import (
 	"github.com/itzarnavbro/gocli/internal/domain"
 )
 
-// Memory is an in-memory domain.Store for tests.
 type Memory struct {
 	mu       sync.Mutex
 	nextID   int64
 	users    map[int64]*domain.User
-	sessions map[string]*domain.Session // key: token hash
+	sessions map[string]*domain.Session
 }
 
 func NewMemory() *Memory {
@@ -27,7 +26,6 @@ func NewMemory() *Memory {
 
 var _ domain.Store = (*Memory)(nil)
 
-// cp returns a copy so callers can't mutate stored state by accident.
 func cp(u *domain.User) *domain.User {
 	c := *u
 	c.TOTPSecretEnc = append([]byte(nil), u.TOTPSecretEnc...)
@@ -47,7 +45,7 @@ func cp(u *domain.User) *domain.User {
 
 func (m *Memory) byName(name string) *domain.User {
 	for _, u := range m.users {
-		if strings.EqualFold(u.Username, name) { // matches COLLATE NOCASE
+		if strings.EqualFold(u.Username, name) {
 			return u
 		}
 	}

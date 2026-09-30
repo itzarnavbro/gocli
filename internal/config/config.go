@@ -14,10 +14,9 @@ type Config struct {
 	SessionTTL        time.Duration
 	LockoutDuration   time.Duration
 	MaxFailedAttempts int
-	TOTPEncKey        []byte // 32 bytes, AES-256
+	TOTPEncKey        []byte
 }
 
-// Load reads config from env vars and fails fast on bad values.
 func Load() (Config, error) {
 	var c Config
 	var err error

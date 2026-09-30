@@ -15,7 +15,6 @@ var (
 	errPasswordMismatch = errors.New("passwords do not match")
 )
 
-// userErrors are safe to show as-is. Anything else is logged and shown generically.
 var userErrors = []error{
 	domain.ErrInvalidCredentials, domain.ErrUserExists, domain.ErrInvalidCode,
 	domain.ErrNo2FA, domain.ErrAlready2FA,

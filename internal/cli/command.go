@@ -9,13 +9,11 @@ import (
 type AuthReq int
 
 const (
-	Any       AuthReq = iota // before and after login
-	Anonymous                // only when logged out
-	LoggedIn                 // only when logged in
+	Any AuthReq = iota
+	Anonymous
+	LoggedIn
 )
 
-// Command is one entry in the registry. help, tab-completion and the
-// login gating are all generated from this table.
 type Command struct {
 	Name string
 	Help string
@@ -42,7 +40,6 @@ func (s *Shell) find(name string) (Command, bool) {
 	return Command{}, false
 }
 
-// Available returns the commands usable in the current login state.
 func (s *Shell) Available() []Command {
 	var out []Command
 	for _, c := range s.cmds {
@@ -53,7 +50,6 @@ func (s *Shell) Available() []Command {
 	return out
 }
 
-// complete returns available command names starting with prefix.
 func (s *Shell) complete(prefix string) []string {
 	var out []string
 	for _, c := range s.Available() {

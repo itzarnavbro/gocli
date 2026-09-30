@@ -21,13 +21,11 @@ var ErrInvalidUsername = errors.New("username must be 3-32 characters: letters, 
 
 var usernameRe = regexp.MustCompile(`^[a-z0-9_]{3,32}$`)
 
-// CodeFunc asks the user for a TOTP code. Login only calls it when 2FA is on.
 type CodeFunc func() (string, error)
 
-// Enrollment is what the user needs to add the account to an authenticator app.
 type Enrollment struct {
-	Secret string // base32, for manual entry
-	URI    string // otpauth:// URI
+	Secret string
+	URI    string
 }
 
 type Service struct {
@@ -42,7 +40,6 @@ func New(st domain.Store, clk domain.Clock, cfg config.Config) *Service {
 
 func normalize(name string) string { return strings.ToLower(strings.TrimSpace(name)) }
 
-// Register creates a new user.
 func (s *Service) Register(ctx context.Context, username, pw string) error {
 	username = normalize(username)
 	if !usernameRe.MatchString(username) {
@@ -62,14 +59,11 @@ func (s *Service) Register(ctx context.Context, username, pw string) error {
 	})
 }
 
-// Login checks password (and TOTP when enabled) and returns a session token.
-// code may be nil for users without 2FA.
 func (s *Service) Login(ctx context.Context, username, pw string, code CodeFunc) (string, error) {
 	now := s.clock.Now()
 
 	user, err := s.store.UserByName(ctx, normalize(username))
 	if errors.Is(err, domain.ErrUserNotFound) {
-		// Same work as a real check, so timing doesn't reveal whether the user exists.
 		_, _, _ = password.Verify(pw, password.Dummy())
 		return "", domain.ErrInvalidCredentials
 	}
@@ -95,7 +89,7 @@ func (s *Service) Login(ctx context.Context, username, pw string, code CodeFunc)
 		}
 	}
 
-	if rehash { // best effort: a failed upgrade must not block login
+	if rehash {
 		if h, err := password.Hash(pw); err == nil {
 			_ = s.store.UpdateHash(ctx, user.ID, h)
 		}
@@ -121,7 +115,7 @@ func (s *Service) checkLoginCode(ctx context.Context, user *domain.User, now tim
 	}
 	entered, err := code()
 	if err != nil {
-		return err // user aborted the prompt: not counted as a failure
+		return err
 	}
 	secret, err := s.openSecret(user)
 	if err != nil {
@@ -134,8 +128,7 @@ func (s *Service) checkLoginCode(ctx context.Context, user *domain.User, now tim
 	return s.store.SetTOTPStep(ctx, user.ID, step)
 }
 
-// Validate resolves a token to its user and session.
-// ErrSessionNotFound and ErrSessionExpired both mean "log in again".
+// session token check: expired/missing means login again.
 func (s *Service) Validate(ctx context.Context, token string) (*domain.User, *domain.Session, error) {
 	now := s.clock.Now()
 	h := hashToken(token)
@@ -159,8 +152,6 @@ func (s *Service) Logout(ctx context.Context, token string) error {
 	return s.store.DeleteSession(ctx, hashToken(token))
 }
 
-// BeginEnable2FA makes a secret but saves nothing. 2FA only turns on in
-// ConfirmEnable2FA, once the user proves their app has the secret.
 func (s *Service) BeginEnable2FA(user *domain.User) (Enrollment, error) {
 	if user.TOTPEnabled {
 		return Enrollment{}, domain.ErrAlready2FA
@@ -191,12 +182,9 @@ func (s *Service) ConfirmEnable2FA(ctx context.Context, userID int64, secret, co
 	if err := s.store.SetTOTP(ctx, user.ID, enc, true); err != nil {
 		return err
 	}
-	// SetTOTP resets the step; record this one so the confirmation code can't be replayed.
 	return s.store.SetTOTPStep(ctx, user.ID, step)
 }
 
-// Disable2FA needs the password and a current code. Wrong answers count toward
-// lockout, so a hijacked session can't use this as a free guessing oracle.
 func (s *Service) Disable2FA(ctx context.Context, userID int64, pw, code string) error {
 	now := s.clock.Now()
 	user, err := s.store.UserByID(ctx, userID)
@@ -226,8 +214,6 @@ func (s *Service) Disable2FA(ctx context.Context, userID int64, pw, code string)
 	return s.store.SetTOTP(ctx, user.ID, nil, false)
 }
 
-// fail records a failed attempt and returns ErrLocked if that tipped the account
-// into lockout, otherwise the error describing what was wrong.
 func (s *Service) fail(ctx context.Context, id int64, now time.Time, bad error) error {
 	_, until, err := s.store.RegisterFailure(ctx, id, s.cfg.MaxFailedAttempts, s.cfg.LockoutDuration, now)
 	if err != nil {
@@ -254,8 +240,7 @@ func (s *Service) openSecret(u *domain.User) (string, error) {
 	return string(pt), nil
 }
 
-// Session tokens are 256 random bits. Only the SHA-256 is stored, so a leaked
-// DB doesn't hand out usable sessions.
+// session token hash hi DB me save hota hai, isliye leaked DB se usable token nahi milta.
 func newToken() (string, error) {
 	b := make([]byte, 32)
 	if _, err := rand.Read(b); err != nil {
@@ -269,14 +254,11 @@ func hashToken(tok string) string {
 	return hex.EncodeToString(sum[:])
 }
 
-// LoginResult is what a successful Authenticate returns.
 type LoginResult struct {
 	Token         string
-	PreviousLogin *time.Time // nil on a user's first login
+	PreviousLogin *time.Time
 }
 
-// Authenticate is Login plus the time of the user's previous login, for display.
-// (Login records the current login time, so the CLI can't read it back afterwards.)
 func (s *Service) Authenticate(ctx context.Context, username, pw string, code CodeFunc) (LoginResult, error) {
 	var prev *time.Time
 	if u, err := s.store.UserByName(ctx, normalize(username)); err == nil {

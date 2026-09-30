@@ -8,13 +8,12 @@ import (
 	"strconv"
 	"strings"
 
-	_ "modernc.org/sqlite" // registers the "sqlite" driver
+	_ "modernc.org/sqlite"
 )
 
 //go:embed migrations/*.sql
 var migrationsFS embed.FS
 
-// Open opens the SQLite file and applies any pending migrations.
 func Open(path string) (*sql.DB, error) {
 	dsn := "file:" + path +
 		"?_pragma=foreign_keys(1)&_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)"
@@ -23,10 +22,10 @@ func Open(path string) (*sql.DB, error) {
 	if err != nil {
 		return nil, fmt.Errorf("open db: %w", err)
 	}
-	d.SetMaxOpenConns(1) // SQLite: one writer, keeps things simple and race-free
+	d.SetMaxOpenConns(1)
 
 	if err := migrate(d); err != nil {
-		_=d.Close()
+		_ = d.Close()
 		return nil, fmt.Errorf("migrate: %w", err)
 	}
 	return d, nil
@@ -48,7 +47,6 @@ func migrate(d *sql.DB) error {
 	sort.Strings(names)
 
 	for _, name := range names {
-		// "001_init.sql" -> version 1
 		version, err := strconv.Atoi(strings.SplitN(name, "_", 2)[0])
 		if err != nil {
 			return fmt.Errorf("bad migration name %q", name)
@@ -72,11 +70,11 @@ func migrate(d *sql.DB) error {
 			return err
 		}
 		if _, err := tx.Exec(string(body)); err != nil {
-			_=tx.Rollback()
+			_ = tx.Rollback()
 			return fmt.Errorf("apply %s: %w", name, err)
 		}
 		if _, err := tx.Exec(`INSERT INTO schema_migrations (version) VALUES (?)`, version); err != nil {
-			_=tx.Rollback()
+			_ = tx.Rollback()
 			return err
 		}
 		if err := tx.Commit(); err != nil {

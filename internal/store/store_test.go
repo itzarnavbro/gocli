@@ -27,7 +27,6 @@ func TestSQLite(t *testing.T) {
 	})
 }
 
-// contract holds the behaviour every domain.Store must have.
 func contract(t *testing.T, mk func(t *testing.T) domain.Store) {
 	ctx := context.Background()
 	now := time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC)

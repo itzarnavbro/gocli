@@ -14,14 +14,13 @@ import (
 )
 
 type params struct {
-	m       uint32 // memory in KiB
-	t       uint32 // iterations
-	p       uint8  // parallelism
+	m       uint32
+	t       uint32
+	p       uint8
 	saltLen uint32
 	keyLen  uint32
 }
 
-// current is what new hashes use. Raise it later and old hashes get upgraded on login.
 var current = params{m: 64 * 1024, t: 3, p: 2, saltLen: 16, keyLen: 32}
 
 var b64 = base64.RawStdEncoding
@@ -32,7 +31,6 @@ var (
 	errBadEncoding = errors.New("invalid password hash encoding")
 )
 
-// Validate enforces the password policy.
 func Validate(pw string) error {
 	if utf8.RuneCountInString(pw) < 8 {
 		return ErrTooShort
@@ -43,7 +41,6 @@ func Validate(pw string) error {
 	return nil
 }
 
-// Hash returns a PHC string: $argon2id$v=19$m=65536,t=3,p=2$<salt>$<hash>
 func Hash(pw string) (string, error) {
 	salt := make([]byte, current.saltLen)
 	if _, err := rand.Read(salt); err != nil {
@@ -53,8 +50,6 @@ func Hash(pw string) (string, error) {
 	return encode(current, salt, key), nil
 }
 
-// Verify checks pw against an encoded hash.
-// needsRehash is true when the stored params are weaker than current.
 func Verify(pw, encoded string) (ok, needsRehash bool, err error) {
 	p, salt, want, err := decode(encoded)
 	if err != nil {
@@ -72,8 +67,7 @@ var (
 	dummy     string
 )
 
-// Dummy returns a valid hash made with current params. Verify against it when the
-// username doesn't exist, so "no such user" takes as long as "wrong password".
+// known-user vs unknown-user timing match karne ke liye dummy hash use hota hai.
 func Dummy() string {
 	dummyOnce.Do(func() { dummy, _ = Hash("dummy-password-for-timing") })
 	return dummy
@@ -86,7 +80,6 @@ func encode(p params, salt, key []byte) string {
 
 func decode(enc string) (p params, salt, key []byte, err error) {
 	parts := strings.Split(enc, "$")
-	// ["", "argon2id", "v=19", "m=..,t=..,p=..", salt, hash]
 	if len(parts) != 6 || parts[0] != "" || parts[1] != "argon2id" {
 		return p, nil, nil, errBadEncoding
 	}
@@ -98,7 +91,6 @@ func decode(enc string) (p params, salt, key []byte, err error) {
 	if _, err = fmt.Sscanf(parts[3], "m=%d,t=%d,p=%d", &p.m, &p.t, &p.p); err != nil {
 		return p, nil, nil, errBadEncoding
 	}
-	// Bounds stop a corrupt or hostile hash from allocating gigabytes or panicking argon2.
 	if p.t < 1 || p.t > 10 || p.p < 1 || p.p > 16 || p.m < 8 || p.m > 256*1024 {
 		return p, nil, nil, errBadEncoding
 	}

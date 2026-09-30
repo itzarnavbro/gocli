@@ -4,22 +4,20 @@ import (
 	"bytes"
 	"context"
 	"encoding/base32"
-	"errors"
-	"testing"
-	"time"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"strings"
+	"testing"
+	"time"
 
 	"golang.org/x/crypto/argon2"
-
 
 	"github.com/itzarnavbro/gocli/internal/config"
 	"github.com/itzarnavbro/gocli/internal/domain"
 	"github.com/itzarnavbro/gocli/internal/otp"
 	"github.com/itzarnavbro/gocli/internal/password"
 	"github.com/itzarnavbro/gocli/internal/store"
-
 )
 
 var bg = context.Background()
@@ -63,7 +61,6 @@ func codeNow(t *testing.T, secret string, clk *fakeClock) string {
 	return otp.TOTPAt(key, clk.Now(), otp.Digits)
 }
 
-// enable2FA turns 2FA on for name and returns the secret.
 func enable2FA(t *testing.T, svc *Service, clk *fakeClock, st *store.Memory, name string) string {
 	t.Helper()
 	user, err := st.UserByName(bg, name)
@@ -93,7 +90,7 @@ func TestRegister(t *testing.T) {
 		t.Errorf("short password: %v", err)
 	}
 
-	register(t, svc, "Arnav") // stored lowercase
+	register(t, svc, "Arnav")
 	if err := svc.Register(bg, "ARNAV", goodPW); !errors.Is(err, domain.ErrUserExists) {
 		t.Errorf("duplicate: %v", err)
 	}
@@ -103,7 +100,7 @@ func TestLoginAndSession(t *testing.T) {
 	svc, clk, _ := setup(t)
 	register(t, svc, "arnav")
 
-	token, err := svc.Login(bg, "ARNAV", goodPW, nil) // username is case-insensitive
+	token, err := svc.Login(bg, "ARNAV", goodPW, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -153,7 +150,6 @@ func TestLockout(t *testing.T) {
 		t.Fatalf("3rd failure should lock: %v", err)
 	}
 
-	// the right password is refused while locked
 	if _, err := svc.Login(bg, "arnav", goodPW, nil); !errors.As(err, &locked) {
 		t.Fatalf("login during lock: %v", err)
 	}
@@ -177,7 +173,7 @@ func TestSessionExpiry(t *testing.T) {
 		t.Fatalf("still valid at 9m: %v", err)
 	}
 
-	clk.Advance(time.Minute) // exactly the TTL
+	clk.Advance(time.Minute)
 	if _, _, err := svc.Validate(bg, token); !errors.Is(err, domain.ErrSessionExpired) {
 		t.Fatalf("at TTL: %v", err)
 	}
@@ -191,7 +187,6 @@ func Test2FALogin(t *testing.T) {
 	register(t, svc, "arnav")
 	secret := enable2FA(t, svc, clk, st, "arnav")
 
-	// 2FA on but no prompt supplied: error, not a panic
 	if _, err := svc.Login(bg, "arnav", goodPW, nil); err == nil {
 		t.Fatal("expected error when code prompt is missing")
 	}
@@ -200,7 +195,6 @@ func Test2FALogin(t *testing.T) {
 		t.Fatalf("wrong code: %v", err)
 	}
 
-	// the code used to confirm enrollment is already burned
 	if _, err := svc.Login(bg, "arnav", goodPW, fixedCode(codeNow(t, secret, clk))); !errors.Is(err, domain.ErrInvalidCode) {
 		t.Fatalf("confirmation code replay: %v", err)
 	}
@@ -221,7 +215,7 @@ func TestDisable2FA(t *testing.T) {
 	secret := enable2FA(t, svc, clk, st, "arnav")
 	user, _ := st.UserByName(bg, "arnav")
 
-	clk.Advance(otp.Period * time.Second) // the confirmation code is burned
+	clk.Advance(otp.Period * time.Second)
 	code := codeNow(t, secret, clk)
 
 	if err := svc.Disable2FA(bg, user.ID, "wrong password", code); !errors.Is(err, domain.ErrInvalidCredentials) {
@@ -298,7 +292,6 @@ func TestAuthenticateReportsPreviousLogin(t *testing.T) {
 func TestLoginRehashesWeakHash(t *testing.T) {
 	svc, clk, st := setup(t)
 
-	// hand-built hash with deliberately weak params (m=8 MiB, t=1, p=1)
 	salt := bytes.Repeat([]byte{1}, 16)
 	key := argon2.IDKey([]byte(goodPW), salt, 1, 8*1024, 1, 32)
 	b := base64.RawStdEncoding
@@ -315,7 +308,7 @@ func TestLoginRehashesWeakHash(t *testing.T) {
 	if u.PasswordHash == weak || !strings.HasPrefix(u.PasswordHash, "$argon2id$v=19$m=65536,t=3,p=2$") {
 		t.Fatalf("hash was not upgraded: %s", u.PasswordHash)
 	}
-	if _, err := svc.Login(bg, "legacy", goodPW, nil); err != nil { // upgraded hash still verifies
+	if _, err := svc.Login(bg, "legacy", goodPW, nil); err != nil {
 		t.Fatalf("login after rehash: %v", err)
 	}
 }

@@ -11,7 +11,6 @@ import (
 	"github.com/itzarnavbro/gocli/internal/domain"
 )
 
-// 50 simultaneous failures must all be counted (no lost updates).
 func TestRegisterFailureIsAtomic(t *testing.T) {
 	d, err := db.Open(filepath.Join(t.TempDir(), "c.db"))
 	if err != nil {
@@ -34,7 +33,7 @@ func TestRegisterFailureIsAtomic(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			_, _, err := s.RegisterFailure(ctx, u.ID, 1000, time.Minute, now) // max high enough to never lock
+			_, _, err := s.RegisterFailure(ctx, u.ID, 1000, time.Minute, now)
 			errs <- err
 		}()
 	}

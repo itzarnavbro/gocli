@@ -10,9 +10,9 @@ type User struct {
 	ID             int64
 	Username       string
 	PasswordHash   string
-	TOTPSecretEnc  []byte // nil when 2FA is off
+	TOTPSecretEnc  []byte
 	TOTPEnabled    bool
-	TOTPLastStep   int64 // last accepted TOTP step, blocks replays
+	TOTPLastStep   int64
 	FailedAttempts int
 	LockedUntil    *time.Time
 	CreatedAt      time.Time
@@ -26,7 +26,6 @@ type Session struct {
 	ExpiresAt time.Time
 }
 
-// Clock lets tests control time (lockout, session expiry, TOTP windows).
 type Clock interface {
 	Now() time.Time
 }
@@ -35,16 +34,12 @@ type RealClock struct{}
 
 func (RealClock) Now() time.Time { return time.Now().UTC() }
 
-// Store is the persistence boundary. SQLite implements it; tests use an in-memory fake.
 type Store interface {
 	CreateUser(ctx context.Context, u *User) error
 	UserByName(ctx context.Context, name string) (*User, error)
 	UserByID(ctx context.Context, id int64) (*User, error)
 
-	// RegisterFailure atomically bumps failed_attempts and sets locked_until
-	// once max is reached. Returns the new count and lock time (nil if not locked).
 	RegisterFailure(ctx context.Context, id int64, max int, lockFor time.Duration, now time.Time) (attempts int, lockedUntil *time.Time, err error)
-	// RecordLogin resets failed_attempts/locked_until and sets last_login_at.
 	RecordLogin(ctx context.Context, id int64, now time.Time) error
 
 	SetTOTP(ctx context.Context, id int64, secretEnc []byte, enabled bool) error
@@ -68,7 +63,7 @@ var (
 	ErrAlready2FA         = errors.New("2FA is already enabled")
 )
 
-// ErrLocked is returned while an account is locked out.
+// account lockout ka status yahi return karta hai.
 type ErrLocked struct{ Until time.Time }
 
 func (e ErrLocked) Error() string {

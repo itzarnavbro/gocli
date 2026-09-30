@@ -8,7 +8,6 @@ import (
 
 var rfcKey = []byte("12345678901234567890")
 
-// RFC 4226 Appendix D
 func TestHOTPVectors(t *testing.T) {
 	want := []string{"755224", "287082", "359152", "969429", "338314",
 		"254676", "287922", "162583", "399871", "520489"}
@@ -19,7 +18,6 @@ func TestHOTPVectors(t *testing.T) {
 	}
 }
 
-// RFC 6238 Appendix B (SHA1, 8 digits)
 func TestTOTPVectors(t *testing.T) {
 	cases := []struct {
 		unix int64
@@ -49,18 +47,15 @@ func TestValidate(t *testing.T) {
 	step := now.Unix() / Period
 	code := func(s int64) string { return HOTP(key, uint64(s), Digits) }
 
-	// current step accepted, step returned
 	got, ok := Validate(secret, code(step), now, 0)
 	if !ok || got != step {
 		t.Fatalf("current step: ok=%v got=%d want=%d", ok, got, step)
 	}
 
-	// replay rejected
 	if _, ok := Validate(secret, code(step), now, step); ok {
 		t.Fatal("replay was accepted")
 	}
 
-	// +-1 accepted, +-2 rejected
 	if _, ok := Validate(secret, code(step-1), now, 0); !ok {
 		t.Error("step-1 rejected")
 	}
@@ -74,7 +69,6 @@ func TestValidate(t *testing.T) {
 		t.Error("step+2 accepted")
 	}
 
-	// garbage
 	for _, bad := range []string{"", "abc", "000000x", "12345"} {
 		if _, ok := Validate(secret, bad, now, 0); ok && bad != code(step) {
 			t.Errorf("accepted %q", bad)

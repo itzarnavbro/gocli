@@ -1,8 +1,8 @@
 package cli
 
 import (
-	"context"
 	"bytes"
+	"context"
 	"path/filepath"
 	"testing"
 	"time"
@@ -24,8 +24,6 @@ func TestPersistsAcrossRestart(t *testing.T) {
 		TOTPEncKey:        bytes.Repeat([]byte{7}, 32),
 	}
 
-	// runOnce opens the DB, runs a scripted shell session, and closes everything,
-	// like one start/stop of the container.
 	runOnce := func(steps ...step) string {
 		conn, err := db.Open(path)
 		if err != nil {
@@ -47,5 +45,5 @@ func TestPersistsAcrossRestart(t *testing.T) {
 	out := runOnce(lines("login", "arnav", pw, "exit")...)
 
 	mustContain(t, out, "Logged in as arnav", "Last login:")
-	mustNotContain(t, out, "first login") // last_login_at survived the restart
+	mustNotContain(t, out, "first login")
 }

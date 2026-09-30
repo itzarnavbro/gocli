@@ -11,21 +11,17 @@ import (
 	"golang.org/x/term"
 )
 
-// IO is everything the shell needs from the outside world.
 type IO interface {
-	ReadCommand(prompt string) (string, error)  // main prompt: history + tab-completion
-	ReadLine(prompt string) (string, error)     // answer to a question
-	ReadPassword(prompt string) (string, error) // masked when on a real terminal
+	ReadCommand(prompt string) (string, error)
+	ReadLine(prompt string) (string, error)
+	ReadPassword(prompt string) (string, error)
 	io.Writer
 }
 
-// completable is implemented by IOs that can tab-complete command names.
 type completable interface {
 	SetCompleter(fn func(prefix string) []string)
 }
 
-// NewIO returns a raw-terminal IO when stdin/stdout are terminals,
-// and a plain line-based IO otherwise (pipes, CI).
 func NewIO() IO {
 	if term.IsTerminal(int(os.Stdin.Fd())) && term.IsTerminal(int(os.Stdout.Fd())) {
 		return newTTY()
@@ -34,11 +30,7 @@ func NewIO() IO {
 	return NewPlain(os.Stdin, os.Stdout)
 }
 
-// ---- real terminal ----
-
-// ttyIO uses two Terminals so command history (up/down) holds only commands,
-// not usernames. The terminal is in raw mode only while reading, so normal
-// output and log lines behave as usual in between.
+// raw terminal input ke liye temporary raw mode use hota hai, taaki normal output disturb na ho.
 type ttyIO struct {
 	fd, outFd int
 	cmd, ans  *term.Terminal
@@ -91,7 +83,6 @@ func (t *ttyIO) read(tm *term.Terminal, prompt string, secret bool) (string, err
 	return tm.ReadLine()
 }
 
-// onKey completes the command word when Tab is pressed.
 func (t *ttyIO) onKey(line string, pos int, key rune) (string, int, bool) {
 	if key != '\t' || t.complete == nil {
 		return "", 0, false
@@ -100,7 +91,7 @@ func (t *ttyIO) onKey(line string, pos int, key rune) (string, int, bool) {
 		pos = len(line)
 	}
 	head, tail := line[:pos], line[pos:]
-	if strings.ContainsAny(head, " \t") { // only the first word is completed
+	if strings.ContainsAny(head, " \t") {
 		return "", 0, false
 	}
 	matches := t.complete(head)
@@ -130,8 +121,6 @@ func commonPrefix(ss []string) string {
 	return p
 }
 
-// ---- plain IO (pipes and tests) ----
-
 type plainIO struct {
 	r *bufio.Reader
 	w io.Writer
@@ -141,12 +130,12 @@ func NewPlain(r io.Reader, w io.Writer) IO { return &plainIO{bufio.NewReader(r),
 
 func (p *plainIO) Write(b []byte) (int, error)                { return p.w.Write(b) }
 func (p *plainIO) ReadCommand(prompt string) (string, error)  { return p.ReadLine(prompt) }
-func (p *plainIO) ReadPassword(prompt string) (string, error) { return p.ReadLine(prompt) } // echoed
+func (p *plainIO) ReadPassword(prompt string) (string, error) { return p.ReadLine(prompt) }
 
 func (p *plainIO) ReadLine(prompt string) (string, error) {
 	_, _ = fmt.Fprint(p.w, prompt)
 	line, err := p.r.ReadString('\n')
-	if err != nil && (!errors.Is(err, io.EOF) || line == "") { // keep a final unterminated line
+	if err != nil && (!errors.Is(err, io.EOF) || line == "") {
 		return "", err
 	}
 	return strings.TrimRight(line, "\r\n"), nil

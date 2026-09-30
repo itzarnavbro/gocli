@@ -11,21 +11,16 @@ import (
 	"github.com/itzarnavbro/gocli/internal/domain"
 )
 
-// SQLite implements domain.Store on top of *sql.DB.
 type SQLite struct{ db *sql.DB }
 
 func NewSQLite(db *sql.DB) *SQLite { return &SQLite{db: db} }
 
 var _ domain.Store = (*SQLite)(nil)
 
-// Times are stored as fixed-width UTC strings, so SQL comparisons like
-// "expires_at <= ?" sort correctly as plain text.
 const tsLayout = "2006-01-02 15:04:05.000000"
 
 func ts(t time.Time) string { return t.UTC().Format(tsLayout) }
 
-// dbTime scans a nullable time column whether the driver hands back
-// a string or an already-parsed time.Time.
 type dbTime struct {
 	T     time.Time
 	Valid bool
@@ -119,9 +114,6 @@ func (s *SQLite) UserByID(ctx context.Context, id int64) (*domain.User, error) {
 		`SELECT `+userCols+` FROM users WHERE id = ?`, id))
 }
 
-// RegisterFailure is one atomic UPDATE, so concurrent failures can't lose a count.
-// When the count reaches max the account locks and the counter resets to 0,
-// so a fresh lockout period always starts from a clean slate.
 func (s *SQLite) RegisterFailure(ctx context.Context, id int64, max int, lockFor time.Duration, now time.Time) (int, *time.Time, error) {
 	var (
 		attempts int
@@ -140,7 +132,6 @@ func (s *SQLite) RegisterFailure(ctx context.Context, id int64, max int, lockFor
 	if err != nil {
 		return 0, nil, err
 	}
-	// Only report a lock that is still in force.
 	if locked.Valid && locked.T.After(now) {
 		return attempts, locked.ptr(), nil
 	}
@@ -153,9 +144,8 @@ func (s *SQLite) RecordLogin(ctx context.Context, id int64, now time.Time) error
 		ts(now), id)
 }
 
-// SetTOTP also resets totp_last_step, since a new secret starts a new step history.
 func (s *SQLite) SetTOTP(ctx context.Context, id int64, secretEnc []byte, enabled bool) error {
-	var secret any // stays nil (SQL NULL) when 2FA is being removed
+	var secret any
 	if len(secretEnc) > 0 {
 		secret = secretEnc
 	}
@@ -211,7 +201,6 @@ func (s *SQLite) DeleteExpired(ctx context.Context, now time.Time) error {
 	return err
 }
 
-// execOne runs an UPDATE that must hit exactly one user row.
 func (s *SQLite) execOne(ctx context.Context, q string, args ...any) error {
 	res, err := s.db.ExecContext(ctx, q, args...)
 	if err != nil {

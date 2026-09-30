@@ -50,12 +50,12 @@ func TestMalformed(t *testing.T) {
 	bad := []string{
 		"",
 		"plaintext",
-		"$argon2id$v=19$m=8,t=1,p=1$c2FsdHNhbHQ",                // missing hash
-		"$argon2i$v=19$m=8,t=1,p=1$c2FsdHNhbHQ$aGFzaGhhc2hoYXNo", // wrong variant
+		"$argon2id$v=19$m=8,t=1,p=1$c2FsdHNhbHQ",
+		"$argon2i$v=19$m=8,t=1,p=1$c2FsdHNhbHQ$aGFzaGhhc2hoYXNo",
 		"$argon2id$v=18$m=8,t=1,p=1$c2FsdHNhbHQ$aGFzaGhhc2hoYXNoaGFzaA",
-		"$argon2id$v=19$m=99999999,t=1,p=1$c2FsdHNhbHQ$aGFzaGhhc2hoYXNoaGFzaA", // memory bomb
-		"$argon2id$v=19$m=8,t=0,p=1$c2FsdHNhbHQ$aGFzaGhhc2hoYXNoaGFzaA",        // t=0 would panic argon2
-		"$argon2id$v=19$m=8,t=1,p=0$c2FsdHNhbHQ$aGFzaGhhc2hoYXNoaGFzaA",        // p=0 would panic argon2
+		"$argon2id$v=19$m=99999999,t=1,p=1$c2FsdHNhbHQ$aGFzaGhhc2hoYXNoaGFzaA",
+		"$argon2id$v=19$m=8,t=0,p=1$c2FsdHNhbHQ$aGFzaGhhc2hoYXNoaGFzaA",
+		"$argon2id$v=19$m=8,t=1,p=0$c2FsdHNhbHQ$aGFzaGhhc2hoYXNoaGFzaA",
 		"$argon2id$v=19$m=8,t=1,p=1$!!!$aGFzaGhhc2hoYXNoaGFzaA",
 	}
 	for _, enc := range bad {
@@ -88,6 +88,6 @@ func FuzzVerify(f *testing.F) {
 	f.Add("")
 	f.Add("$$$$$")
 	f.Fuzz(func(t *testing.T, enc string) {
-		_,_,_=Verify("pw", enc) // must never panic
+		_, _, _ = Verify("pw", enc)
 	})
 }

@@ -1,0 +1,24 @@
+services:
+  app:
+    build: .
+    image: gocli:latest
+    init: true          # forwards SIGTERM and reaps zombies
+    stdin_open: true    # the CLI is interactive
+    tty: true
+    environment:
+      TOTP_ENC_KEY: ${TOTP_ENC_KEY:?set TOTP_ENC_KEY in .env}
+      SESSION_TTL: ${SESSION_TTL:-15m}
+      LOCKOUT_DURATION: ${LOCKOUT_DURATION:-15m}
+      MAX_FAILED_ATTEMPTS: ${MAX_FAILED_ATTEMPTS:-5}
+      TOTP_ISSUER: ${TOTP_ISSUER:-CLI-Login}
+    volumes:
+      - data:/data      # the SQLite file lives here and survives restarts
+
+  test:
+    profiles: ["test"]  # only runs when asked for
+    build:
+      context: .
+      target: test
+
+volumes:
+  data:
